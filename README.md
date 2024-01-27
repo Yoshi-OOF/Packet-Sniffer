@@ -30,6 +30,9 @@ Yoshi Packet Sniffer is a Python application that allows you to capture and anal
 3. Right-click on a packet in the treeview to copy its details to the clipboard.
 4. Click on the "Stop Capture" button to stop capturing packets.
 
+## Picture
+![image](https://github.com/Yoshi-OOF/Packet-Sniffer/assets/18462508/4bc12bed-c628-437d-b2af-6771c444366b)
+
 ## Contributing
 
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request.
