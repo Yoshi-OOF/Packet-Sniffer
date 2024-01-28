@@ -5,6 +5,7 @@ import threading
 import pyperclip
 
 packet_counts = {}
+packet_details = {}
 is_adding_packets = False
 sniff_thread_started = False
 
@@ -42,8 +43,9 @@ def packet_callback(packet):
             dst += ':' + str(packet[scapy.UDP].dport)
 
         packet_key = (src, dst, proto_name)
-
-        packet_counts[packet_key] = packet_counts.get(packet_key, 0) + 1
+        packet_id = len(packet_details)
+        packet_details[packet_id] = packet
+        packet_counts[packet_key] = (packet_counts.get(packet_key, (0, None))[0] + 1, packet_id)
 
 def toggle_packet_adding():
     global is_adding_packets, sniff_thread_started
@@ -61,9 +63,9 @@ def update_tree():
         packet_counts_copy = dict(packet_counts)
         for i in tree.get_children():
             tree.delete(i)
-        for packet_key, count in packet_counts_copy.items():
+        for packet_key, (count, packet_id) in packet_counts_copy.items():
             src, dst, proto = packet_key
-            tree.insert("", 'end', values=(count, src, dst, proto))
+            tree.insert("", 'end', values=(count, src, dst, proto, packet_id))
     except RuntimeError:
         packet_counts.clear()
         update_tree()
@@ -77,6 +79,17 @@ def schedule_update():
         finally:
             app.after(1000, schedule_update)
 
+def show_packet_details():
+    selected_item = tree.focus()
+    if selected_item:
+        packet_id = tree.item(selected_item, 'values')[4]
+        packet = packet_details.get(int(packet_id))
+        if packet:
+            details_window = tk.Toplevel(app)
+            details_window.title("Détails du paquet")
+            details_text = tk.Text(details_window)
+            details_text.insert(tk.END, packet.show(dump=True))
+            details_text.pack(expand=True, fill='both')
 
 def treeview_sort_column(tree, col, reverse):
     l = [(tree.set(k, col), k) for k in tree.get_children('')]
@@ -90,15 +103,15 @@ def treeview_sort_column(tree, col, reverse):
 def copy_source_ip_port():
     selected_item = tree.focus()
     if selected_item:
-        source_ip_port = tree.item(selected_item, 'values')[1] 
+        source_ip_port = tree.item(selected_item, 'values')[1]
         copy_to_clipboard(source_ip_port)
-        
+
 def copy_destination_ip_port():
     selected_item = tree.focus()
     if selected_item:
-        destination_ip_port = tree.item(selected_item, 'values')[2] 
+        destination_ip_port = tree.item(selected_item, 'values')[2]
         copy_to_clipboard(destination_ip_port)
-        
+
 def copy_protocol():
     selected_item = tree.focus()
     if selected_item:
@@ -108,7 +121,7 @@ def copy_protocol():
 app = tk.Tk()
 app.title("Yoshi Packet Sniffer")
 
-columns = ("Count", "Source IP:Port", "Destination IP:Port", "Protocol")
+columns = ("Count", "Source IP:Port", "Destination IP:Port", "Protocol", "Packet ID")
 tree = ttk.Treeview(app, columns=columns, show='headings')
 
 for col in columns:
@@ -127,6 +140,7 @@ def on_right_click(event):
         menu.add_command(label="Copier Source IP:Port", command=copy_source_ip_port)
         menu.add_command(label="Copier Destination IP:Port", command=copy_destination_ip_port)
         menu.add_command(label="Copier Protocol", command=copy_protocol)
+        menu.add_command(label="Visualiser les détails", command=show_packet_details)
         menu.post(event.x_root, event.y_root)
 
 tree.bind("<Button-3>", on_right_click)
