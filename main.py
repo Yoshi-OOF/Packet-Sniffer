@@ -57,16 +57,25 @@ def toggle_packet_adding():
         schedule_update()
 
 def update_tree():
-    for i in tree.get_children():
-        tree.delete(i)
-    for packet_key, count in packet_counts.items():
-        src, dst, proto = packet_key
-        tree.insert("", 'end', values=(count, src, dst, proto))
+    try:
+        packet_counts_copy = dict(packet_counts)
+        for i in tree.get_children():
+            tree.delete(i)
+        for packet_key, count in packet_counts_copy.items():
+            src, dst, proto = packet_key
+            tree.insert("", 'end', values=(count, src, dst, proto))
+    except RuntimeError:
+        packet_counts.clear()
+        update_tree()
 
 def schedule_update():
-    update_tree()
-    app.after(1000, schedule_update)
-        
+    try:
+        update_tree()
+    except Exception as e:
+        print(f"Une erreur s'est produite: {e}")
+    finally:
+        app.after(1000, schedule_update)
+
 def copy_source_ip_port():
     selected_item = tree.focus()
     if selected_item:
