@@ -1,6 +1,6 @@
 import scapy.all as scapy
 import tkinter as tk
-from tkinter import ttk, Menu
+from tkinter import ttk, Menu, font as tkfont
 import threading
 import pyperclip
 
@@ -69,12 +69,23 @@ def update_tree():
         update_tree()
 
 def schedule_update():
-    try:
-        update_tree()
-    except Exception as e:
-        print(f"Une erreur s'est produite: {e}")
-    finally:
-        app.after(1000, schedule_update)
+    if is_adding_packets:
+        try:
+            update_tree()
+        except Exception as e:
+            print(f"Une erreur s'est produite: {e}")
+        finally:
+            app.after(1000, schedule_update)
+
+
+def treeview_sort_column(tree, col, reverse):
+    l = [(tree.set(k, col), k) for k in tree.get_children('')]
+    l.sort(reverse=reverse)
+
+    for index, (val, k) in enumerate(l):
+        tree.move(k, '', index)
+
+    tree.heading(col, command=lambda: treeview_sort_column(tree, col, not reverse))
 
 def copy_source_ip_port():
     selected_item = tree.focus()
@@ -99,8 +110,11 @@ app.title("Yoshi Packet Sniffer")
 
 columns = ("Count", "Source IP:Port", "Destination IP:Port", "Protocol")
 tree = ttk.Treeview(app, columns=columns, show='headings')
+
 for col in columns:
-    tree.heading(col, text=col)
+    tree.heading(col, text=col, command=lambda _col=col: treeview_sort_column(tree, _col, False))
+    tree.column(col, width=tkfont.Font().measure(col.title()))
+
 tree.pack(expand=True, fill='both')
 
 menu = Menu(app, tearoff=0)
